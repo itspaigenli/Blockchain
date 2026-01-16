@@ -1,0 +1,39 @@
+{
+  "_format": "hh3-sol-build-info-1",
+  "id": "solc-0_8_28-92556b5e8dcd9f78c6e249b3d002500f5d5be0ee",
+  "solcVersion": "0.8.28",
+  "solcLongVersion": "0.8.28+commit.7893614a",
+  "userSourceNameMap": {
+    "contracts/SocialRewards.sol": "project/contracts/SocialRewards.sol"
+  },
+  "input": {
+    "language": "Solidity",
+    "settings": {
+      "evmVersion": "cancun",
+      "optimizer": {
+        "enabled": true,
+        "runs": 200
+      },
+      "outputSelection": {
+        "*": {
+          "": [
+            "ast"
+          ],
+          "*": [
+            "abi",
+            "evm.bytecode",
+            "evm.deployedBytecode",
+            "evm.methodIdentifiers",
+            "metadata"
+          ]
+        }
+      },
+      "remappings": []
+    },
+    "sources": {
+      "project/contracts/SocialRewards.sol": {
+        "content": "// SPDX-License-Identifier: MIT\r\npragma solidity ^0.8.28;\r\n\r\ncontract SocialRewards {\r\n    string public name = \"Hela Social Token\";\r\n    string public symbol = \"HST\";\r\n    uint8 public decimals = 18;\r\n    uint256 public totalSupply;\r\n    \r\n    address public owner;\r\n    uint256 public constant REGISTRATION_REWARD = 1 * 10**18; // 1 token\r\n    uint256 public constant POST_REWARD = 1 * 10**18; // 1 token per 10 posts\r\n    uint256 public constant POSTS_REQUIRED = 10;\r\n    \r\n    mapping(address => uint256) public balanceOf;\r\n    mapping(address => bool) public hasRegistered;\r\n    mapping(address => uint256) public postCount;\r\n    mapping(address => uint256) public lastRewardedPostCount;\r\n    \r\n    event Transfer(address indexed from, address indexed to, uint256 value);\r\n    event Registration(address indexed user, uint256 reward);\r\n    event PostReward(address indexed user, uint256 posts, uint256 reward);\r\n    \r\n    modifier onlyOwner() {\r\n        require(msg.sender == owner, \"Not authorized\");\r\n        _;\r\n    }\r\n    \r\n    constructor() {\r\n        owner = msg.sender;\r\n        // Mint initial supply to owner for distribution\r\n        totalSupply = 1000000 * 10**18; // 1 million tokens\r\n        balanceOf[owner] = totalSupply;\r\n    }\r\n    \r\n    function registerUser(address user) external onlyOwner {\r\n        require(!hasRegistered[user], \"User already registered\");\r\n        require(balanceOf[owner] >= REGISTRATION_REWARD, \"Insufficient balance for reward\");\r\n        \r\n        hasRegistered[user] = true;\r\n        balanceOf[owner] -= REGISTRATION_REWARD;\r\n        balanceOf[user] += REGISTRATION_REWARD;\r\n        \r\n        emit Transfer(owner, user, REGISTRATION_REWARD);\r\n        emit Registration(user, REGISTRATION_REWARD);\r\n    }\r\n    \r\n    function recordPost(address user) external onlyOwner {\r\n        require(hasRegistered[user], \"User not registered\");\r\n        \r\n        postCount[user]++;\r\n        \r\n        // Check if user has completed 10 posts since last reward\r\n        uint256 postsForReward = postCount[user] - lastRewardedPostCount[user];\r\n        \r\n        if (postsForReward >= POSTS_REQUIRED) {\r\n            uint256 rewardsEarned = postsForReward / POSTS_REQUIRED;\r\n            uint256 rewardAmount = rewardsEarned * POST_REWARD;\r\n            \r\n            require(balanceOf[owner] >= rewardAmount, \"Insufficient balance for reward\");\r\n            \r\n            balanceOf[owner] -= rewardAmount;\r\n            balanceOf[user] += rewardAmount;\r\n            \r\n            lastRewardedPostCount[user] = postCount[user] - (postsForReward % POSTS_REQUIRED);\r\n            \r\n            emit Transfer(owner, user, rewardAmount);\r\n            emit PostReward(user, postCount[user], rewardAmount);\r\n        }\r\n    }\r\n    \r\n    function transfer(address to, uint256 value) external returns (bool) {\r\n        require(balanceOf[msg.sender] >= value, \"Insufficient balance\");\r\n        require(to != address(0), \"Invalid address\");\r\n        \r\n        balanceOf[msg.sender] -= value;\r\n        balanceOf[to] += value;\r\n        \r\n        emit Transfer(msg.sender, to, value);\r\n        return true;\r\n    }\r\n    \r\n    function getUserStats(address user) external view returns (\r\n        bool registered,\r\n        uint256 balance,\r\n        uint256 posts,\r\n        uint256 postsUntilNextReward\r\n    ) {\r\n        registered = hasRegistered[user];\r\n        balance = balanceOf[user];\r\n        posts = postCount[user];\r\n        uint256 postsSinceReward = posts - lastRewardedPostCount[user];\r\n        postsUntilNextReward = postsSinceReward >= POSTS_REQUIRED ? 0 : POSTS_REQUIRED - postsSinceReward;\r\n    }\r\n    \r\n    function transferOwnership(address newOwner) external onlyOwner {\r\n        require(newOwner != address(0), \"Invalid address\");\r\n        owner = newOwner;\r\n    }\r\n}\r\n"
+      }
+    }
+  }
+}
